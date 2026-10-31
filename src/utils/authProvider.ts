@@ -1,18 +1,56 @@
 import type { AppClientEndpoint, AppClientRequest } from '~/constants/appClient'
-import { APP_CLIENT_REQUEST } from '~/constants/appClient'
+import { APP_CLIENT_ENDPOINTS, APP_CLIENT_REQUEST } from '~/constants/appClient'
 import type { AppAuthTokens } from '~/logic/appAuthStorage'
 import { appAuthTokens, defaultAppAuthTokens, resetAppAuthTokens } from '~/logic/appAuthStorage'
 
 import { waitWithSignal } from './abort'
-import { HDAppKey } from './appSign'
+import { HDAppKey, signAppParams } from './appSign'
 import { sendMessage } from './messaging'
+import { requestSafariMainWorldAppFetch } from './safariApiBridgeClient'
+import { isSafariRuntime } from './safariRuntime'
 
 export function revokeAccessKey() {
   resetAppAuthTokens()
 }
 
-/** APP 接口交由后台按 PiliPlus 的请求方式签名并发出，参数无需在页面侧签名 */
-export function requestAppClient(endpoint: AppClientEndpoint, params: AppClientRequest['params']): Promise<any> {
+const isSafari = isSafariRuntime()
+
+/**
+ * APP 接口交由后台按 PiliPlus 的请求方式签名并发出，参数无需在页面侧签名。
+ *
+ * Safari 例外：扩展后台发起的 fetch 会带上 safari-web-extension:// 的 Origin，
+ * B 站 passport / app 接口对它一律返回 HTTP 412；而 WebKit 不允许扩展改写自己
+ * 发起请求的请求头（bug 253696），所以这里改由页面主世界签名后直接发出，
+ * 让请求带上真实的 https://www.bilibili.com Origin。
+ */
+export async function requestAppClient(endpoint: AppClientEndpoint, params: AppClientRequest['params']): Promise<any> {
+  const target = Object.hasOwn(APP_CLIENT_ENDPOINTS, endpoint) ? APP_CLIENT_ENDPOINTS[endpoint] : undefined
+  if (!target)
+    return { code: -400, message: `Unknown APP client endpoint: ${endpoint}` }
+
+  // 只有 passport 的登录 POST 需要换 Origin：
+  // - 它校验 Origin，扩展后台的 safari-web-extension:// 会被判 412
+  // - 它回 CORS 头，页面主世界能正常读到响应
+  // 反之 app.bilibili.com 的推荐接口不回 ACAO（OPTIONS 405），页面上下文发不出去，
+  // 但 GET 不校验 Origin，继续走后台反而正常。
+  if (isSafari && target.profile === 'login') {
+    try {
+      const signed = new URLSearchParams(signAppParams(params ?? {}))
+      const url = target.form ? target.url : `${target.url}?${signed}`
+      const result = await requestSafariMainWorldAppFetch(
+        url,
+        target.method,
+        target.form ? signed.toString() : undefined,
+      )
+      if (result.ok && result.data)
+        return result.data
+      return { code: -result.status, message: `HTTP ${result.status}` }
+    }
+    catch (error) {
+      return { code: -1, message: error instanceof Error ? error.message : String(error) }
+    }
+  }
+
   const request: AppClientRequest = { endpoint, params, mid: appAuthTokens.value.mid }
   return sendMessage(APP_CLIENT_REQUEST, request)
 }

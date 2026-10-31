@@ -1,33 +1,13 @@
 import browser from 'webextension-polyfill'
 
-import type { AppClientEndpoint, AppClientRequest } from '~/constants/appClient'
-import { APP_CLIENT_REQUEST } from '~/constants/appClient'
+import type { AppClientProfile, AppClientRequest } from '~/constants/appClient'
+import { APP_CLIENT_ENDPOINTS, APP_CLIENT_REQUEST } from '~/constants/appClient'
 import { signAppParams } from '~/utils/appSign'
 import { onMessage } from '~/utils/messaging'
 
 // APP 接口（扫码授权、token 刷新、推荐流、不感兴趣）统一由后台按 PiliPlus 的请求构造发出：
 // 不带网页 Cookie，使用 PiliPlus 的 User-Agent 与 APP 请求头，避免把浏览器信息透传给 B 站。
 // PiliPlus 的 AccountManager 会在单个请求的请求头之后再合并账号请求头，下面的取值均为合并后的最终结果。
-
-type AppClientProfile = 'login' | 'feed' | 'account'
-
-interface AppClientEndpointConfig {
-  url: string
-  method: 'GET' | 'POST'
-  /** POST 时参数放在表单中；否则与 PiliPlus 一致放在 query 中 */
-  form?: boolean
-  profile: AppClientProfile
-}
-
-const APP_CLIENT_ENDPOINTS: Record<AppClientEndpoint, AppClientEndpointConfig> = {
-  qrcodeAuthCode: { url: 'https://passport.bilibili.com/x/passport-tv-login/qrcode/auth_code', method: 'POST', profile: 'login' },
-  qrcodePoll: { url: 'https://passport.bilibili.com/x/passport-tv-login/qrcode/poll', method: 'POST', profile: 'login' },
-  refreshTokenV3: { url: 'https://passport.bilibili.com/api/v3/oauth2/refresh_token', method: 'POST', form: true, profile: 'login' },
-  refreshTokenV2: { url: 'https://passport.bilibili.com/api/v2/oauth2/refresh_token', method: 'POST', form: true, profile: 'login' },
-  feedIndex: { url: 'https://app.bilibili.com/x/v2/feed/index', method: 'GET', profile: 'feed' },
-  feedDislike: { url: 'https://app.bilibili.com/x/feed/dislike', method: 'GET', profile: 'account' },
-  feedDislikeCancel: { url: 'https://app.bilibili.com/x/feed/dislike/cancel', method: 'GET', profile: 'account' },
-}
 
 const APP_CLIENT_REFERER = 'https://www.bilibili.com'
 // PiliPlus 的 Dio 默认 User-Agent

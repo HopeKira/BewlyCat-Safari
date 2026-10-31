@@ -1,6 +1,18 @@
 export const SAFARI_API_REQUEST = 'BEWLY_API_REQUEST'
 export const SAFARI_API_RESPONSE = 'BEWLY_API_RESPONSE'
 
+/**
+ * APP 接口（passport 扫码、token 刷新、推荐流）在 Safari 下必须由页面主世界代发。
+ * 扩展后台发起的 fetch 会带上 safari-web-extension:// 的 Origin，B 站直接返回 412。
+ */
+export const SAFARI_APP_FETCH_REQUEST = 'BEWLY_APP_FETCH_REQUEST'
+
+export interface SafariAppFetchResult {
+  ok: boolean
+  status: number
+  data: unknown
+}
+
 export interface SafariApiDefinition {
   url: string
   method: 'post'

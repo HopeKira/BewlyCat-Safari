@@ -1,12 +1,57 @@
-import type { SafariApiDefinition } from '~/utils/safariApi'
+import type { SafariApiDefinition, SafariAppFetchResult } from '~/utils/safariApi'
 import {
   getSafariMainWorldApiDefinition,
   SAFARI_API_REQUEST,
   SAFARI_API_RESPONSE,
+  SAFARI_APP_FETCH_REQUEST,
 } from '~/utils/safariApi'
 import { isSafariRuntime } from '~/utils/safariRuntime'
 
 let isSetup = false
+
+// 页面脚本同样能往 window.postMessage，所以这里必须锁死可代发的域名，
+// 不能让主世界桥变成一个可被页面利用的任意请求代理。
+const APP_FETCH_ALLOWED_HOSTS = new Set(['passport.bilibili.com', 'app.bilibili.com'])
+
+export async function executeSafariAppFetch(
+  url: string,
+  method: string,
+  body?: string,
+): Promise<SafariAppFetchResult> {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  }
+  catch {
+    throw new Error('APP client request rejected: invalid URL')
+  }
+
+  if (parsed.protocol !== 'https:' || !APP_FETCH_ALLOWED_HOSTS.has(parsed.hostname))
+    throw new Error(`APP client request rejected: ${parsed.hostname} is not allowed`)
+
+  const init: RequestInit = {
+    method,
+    // APP 接口不能带网页 Cookie，否则会把 access key 绑到网页登录态上
+    credentials: 'omit',
+  }
+  if (body) {
+    init.body = body
+    init.headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }
+  }
+
+  const response = await fetch(url, init)
+  const text = await response.text()
+  let data: unknown = null
+  // 412 时 B 站返回的是 HTML 错误页，解析失败要保留状态码而不是抛错
+  try {
+    data = text ? JSON.parse(text) : null
+  }
+  catch {
+    data = null
+  }
+
+  return { ok: response.ok, status: response.status, data }
+}
 
 function appendSearchParams(url: string, params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams()
@@ -90,6 +135,34 @@ export function setupSafariApiBridge() {
     }
 
     void executeSafariApiRequest(namespace, apiName, options)
+      .then((data) => {
+        window.postMessage({ type: SAFARI_API_RESPONSE, requestId, data }, '*')
+      })
+      .catch((error) => {
+        window.postMessage({
+          type: SAFARI_API_RESPONSE,
+          requestId,
+          error: error instanceof Error ? error.message : String(error),
+        }, '*')
+      })
+  })
+
+  // APP 接口代发：复用同一套 requestId / SAFARI_API_RESPONSE 回包通道
+  window.addEventListener('message', (event) => {
+    if (event.source !== window || !event.data || typeof event.data !== 'object')
+      return
+
+    const { type, requestId, url, method, body } = event.data
+    if (
+      type !== SAFARI_APP_FETCH_REQUEST
+      || typeof requestId !== 'string'
+      || typeof url !== 'string'
+      || typeof method !== 'string'
+    ) {
+      return
+    }
+
+    void executeSafariAppFetch(url, method, typeof body === 'string' ? body : undefined)
       .then((data) => {
         window.postMessage({ type: SAFARI_API_RESPONSE, requestId, data }, '*')
       })

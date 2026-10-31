@@ -1,4 +1,5 @@
-import { SAFARI_API_REQUEST, SAFARI_API_RESPONSE } from '~/utils/safariApi'
+import type { SafariAppFetchResult } from '~/utils/safariApi'
+import { SAFARI_APP_FETCH_REQUEST, SAFARI_API_REQUEST, SAFARI_API_RESPONSE } from '~/utils/safariApi'
 
 interface PendingRequest {
   resolve: (value: unknown) => void
@@ -58,6 +59,40 @@ export function requestSafariMainWorldApi(
       namespace,
       apiName,
       options,
+    }, '*')
+  })
+}
+
+/**
+ * 让页面主世界代发 APP 接口请求，绕开扩展后台 Origin 被 B 站 412 拦截的问题。
+ * 回包复用 SAFARI_API_RESPONSE 通道，按 requestId 匹配。
+ */
+export function requestSafariMainWorldAppFetch(
+  url: string,
+  method: string,
+  body?: string,
+): Promise<SafariAppFetchResult> {
+  ensureResponseListener()
+
+  return new Promise((resolve, reject) => {
+    const requestId = `bewly_app_${++requestIdCounter}_${Date.now()}`
+    const timeout = setTimeout(() => {
+      if (!pendingRequests.delete(requestId))
+        return
+      reject(new Error('Safari APP fetch timeout'))
+    }, 15000)
+
+    pendingRequests.set(requestId, {
+      resolve: value => resolve(value as SafariAppFetchResult),
+      reject,
+      timeout,
+    })
+    window.postMessage({
+      type: SAFARI_APP_FETCH_REQUEST,
+      requestId,
+      url,
+      method,
+      body,
     }, '*')
   })
 }
