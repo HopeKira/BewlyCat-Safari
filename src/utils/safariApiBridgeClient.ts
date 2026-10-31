@@ -1,5 +1,5 @@
 import type { SafariAppFetchResult } from '~/utils/safariApi'
-import { SAFARI_APP_FETCH_REQUEST, SAFARI_API_REQUEST, SAFARI_API_RESPONSE } from '~/utils/safariApi'
+import { SAFARI_API_REQUEST, SAFARI_API_RESPONSE, SAFARI_APP_FETCH_REQUEST } from '~/utils/safariApi'
 
 interface PendingRequest {
   resolve: (value: unknown) => void
