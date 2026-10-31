@@ -25,7 +25,14 @@ export function setupLoginStateWatcher() {
   if (!cookieChangeEvent)
     return
 
-  cookieChangeEvent.addListener(({ cookie }) => {
+  cookieChangeEvent.addListener((change) => {
+    // Safari 的 cookies.onChanged 会触发但不带 changeInfo（解构 { cookie } 会抛
+    // TypeError: Cannot destructure property 'cookie' from null or undefined），
+    // 所以这里先做空值保护再解构。
+    const cookie = change?.cookie
+    if (!cookie?.domain || !cookie?.name)
+      return
+
     const normalizedDomain = cookie.domain.trim().toLowerCase().replace(/^\.+/, '')
     const isBilibiliDomain = normalizedDomain === 'bilibili.com' || normalizedDomain.endsWith('.bilibili.com')
 

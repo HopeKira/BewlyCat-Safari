@@ -115,8 +115,10 @@ export function isAppClientRequestUrl(url: string): boolean {
 }
 
 async function syncAppClientHeaderRules() {
+  // Safari（WebKit bug 253696）不允许扩展改写自己后台发起请求的请求头，
+  // 这些规则不会生效，注册本身还会抛错刷日志，直接跳过。
   // eslint-disable-next-line node/prefer-global/process
-  if (process.env.FIREFOX)
+  if (process.env.FIREFOX || process.env.SAFARI)
     return
 
   try {
