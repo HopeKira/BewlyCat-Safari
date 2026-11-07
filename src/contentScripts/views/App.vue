@@ -5,7 +5,6 @@ import { provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import Button from '~/components/Button.vue'
-import FirefoxScrollbar from '~/components/FirefoxScrollbar.vue'
 import Icon from '~/components/Icon.vue'
 import Radio from '~/components/Radio.vue'
 import TopBarModeSwitcher from '~/components/TopBar/components/TopBarModeSwitcher.vue'
@@ -27,7 +26,6 @@ import { useSettingsStore } from '~/stores/settingsStore'
 import { useTopBarStore } from '~/stores/topBarStore'
 import { stripBilibiliLocalePathname } from '~/utils/bilibiliLocale'
 import { setOriginalBilibiliTopBarScrolled } from '~/utils/bilibiliTopBar'
-import { isFirefoxBuild } from '~/utils/buildTarget'
 import { SELECTION_FALLBACK_CLASS, supportsHighlightInheritance } from '~/utils/highlightInheritance'
 import { isHomePage, isInIframe, isNotificationPage, isSearchResultsPage, isVideoOrBangumiPage, openLinkToNewTab, queryDomUntilFound, scrollToTop } from '~/utils/main'
 import emitter from '~/utils/mitt'
@@ -998,8 +996,6 @@ useEventListener(window, 'resize', scheduleLayoutEditTargetsRefresh)
 useEventListener(window, 'scroll', scheduleLayoutEditTargetsRefresh, { passive: true })
 onUnmounted(stopLayoutEditTargetObserver)
 const scrollViewportRef = ref<HTMLElement | null>(null)
-// Firefox 原生滚动条无法自定义外观，仅 Firefox 包提供可选的重绘滚动条
-const useFirefoxScrollbar = computed(() => isFirefoxBuild && settings.value.enableFirefoxScrollbarRepaint)
 watch(scrollViewportRef, (viewport, _previousViewport, onCleanup) => {
   if (viewport && isHomePage() && !settings.value.useOriginalBilibiliHomepage)
     onCleanup(installScrollBridge(viewport))
@@ -2102,7 +2098,6 @@ if (settings.value.cleanUrlArgument) {
             class="bewly-scroll-viewport bew-page-controls"
             :class="{
               'bew-page-controls--blend': useBlendedPageControls,
-              'bewly-scroll-viewport--repainted-scrollbar': useFirefoxScrollbar,
             }"
             :style="{
               '--bew-control-wallpaper-mask': pageControlWallpaperMask,
@@ -2135,7 +2130,6 @@ if (settings.value.cleanUrlArgument) {
           </div>
         </template>
       </Transition>
-      <FirefoxScrollbar v-if="useFirefoxScrollbar && showBewlyPage" :target="scrollViewportRef" />
 
       <Transition v-if="!showBewlyPage && iframePageURL && !isInIframe()" name="fade">
         <IframePage ref="iframePageRef" :url="iframePageURL" @scroll="topBarRef?.handleScroll($event)" />
@@ -2513,9 +2507,5 @@ if (settings.value.cleanUrlArgument) {
 .bewly-scroll-viewport {
   outline: none;
   scrollbar-gutter: stable;
-}
-
-.bewly-scroll-viewport--repainted-scrollbar {
-  scrollbar-width: none;
 }
 </style>

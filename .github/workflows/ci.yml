@@ -82,19 +82,9 @@ jobs:
       - name: Build Extension
         run: pnpm build
 
-      - name: Upload Chrome Extension Zip
+      - name: Upload Safari Extension
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == 'lts/*' && github.ref_name == 'main' }}
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: BewlyCat-chrome-extension
-          path: extension
-
-      - name: Build Firefox Extension
-        run: pnpm build-firefox
-
-      - name: Upload Firefox Extension Zip
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == 'lts/*' && github.ref_name == 'main' }}
-        uses: actions/upload-artifact@v4.3.1
-        with:
-          name: BewlyCat-firefox-extension
-          path: extension-firefox
+          name: BewlyCat-safari-extension
+          path: extension-safari

@@ -7,7 +7,7 @@ import AutoImport from 'unplugin-auto-import/vite'
 import type { UserConfig } from 'vite'
 import { defineConfig } from 'vite'
 
-import { buildCommit, isDev, isFirefox, isSafari, port, r } from './scripts/utils'
+import { buildCommit, extensionDist, isDev, port, r } from './scripts/utils'
 // import { MV3Hmr } from './vite-mv3-hmr'
 
 export const sharedConfig: UserConfig = {
@@ -51,7 +51,6 @@ export const sharedConfig: UserConfig = {
       '__DEV__': JSON.stringify(isDev),
       '__BUILD_COMMIT__': JSON.stringify(buildCommit),
       'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
-      'process.env.FIREFOX': JSON.stringify(isFirefox),
       '__VUE_OPTIONS_API__': JSON.stringify(true),
       '__VUE_PROD_DEVTOOLS__': JSON.stringify(false),
       'preventAssignment': true,
@@ -90,7 +89,7 @@ export default defineConfig(({ command }) => ({
     },
   },
   build: {
-    outDir: r(isFirefox ? 'extension-firefox/dist' : isSafari ? 'extension-safari/dist' : 'extension/dist'),
+    outDir: r(extensionDist),
     emptyOutDir: true,
     sourcemap: false, // https://github.com/vitejs/vite-plugin-vue/issues/35
     // https://developer.chrome.com/docs/webstore/program_policies/#:~:text=Code%20Readability%20Requirements

@@ -9,7 +9,6 @@ import { onMessage } from '~/utils/messaging'
 // 不带网页 Cookie，使用 PiliPlus 的 User-Agent 与 APP 请求头，避免把浏览器信息透传给 B 站。
 // PiliPlus 的 AccountManager 会在单个请求的请求头之后再合并账号请求头，下面的取值均为合并后的最终结果。
 
-const APP_CLIENT_REFERER = 'https://www.bilibili.com'
 // PiliPlus 的 Dio 默认 User-Agent
 const DART_USER_AGENT = 'Dart/3.6 (dart:io)'
 // PiliPlus 推荐流使用的 HD 客户端 User-Agent
@@ -88,72 +87,6 @@ async function getRequestHeaders(profile: AppClientProfile, mid?: number | null)
   }
 }
 
-// Chromium 的 fetch 无法改写 User-Agent / Referer，也会附带 sec-ch-ua 客户端提示；
-// 用仅匹配非标签页请求（即扩展后台自身）的会话规则改写，网页自己的请求不受影响。
-const APP_CLIENT_HEADER_RULES: { id: number, regexFilter: string, userAgent: string }[] = [
-  {
-    id: 1002,
-    regexFilter: '^https://passport\\.bilibili\\.com/(x/passport-tv-login/qrcode/|api/v[23]/oauth2/refresh_token)',
-    userAgent: DART_USER_AGENT,
-  },
-  {
-    id: 1003,
-    regexFilter: '^https://app\\.bilibili\\.com/x/v2/feed/index\\?',
-    userAgent: HD_USER_AGENT,
-  },
-  {
-    id: 1004,
-    regexFilter: '^https://app\\.bilibili\\.com/x/feed/dislike(/cancel)?\\?',
-    userAgent: DART_USER_AGENT,
-  },
-]
-
-const APP_CLIENT_URL_PATTERN = new RegExp(APP_CLIENT_HEADER_RULES.map(rule => `(?:${rule.regexFilter})`).join('|'))
-
-export function isAppClientRequestUrl(url: string): boolean {
-  return APP_CLIENT_URL_PATTERN.test(url)
-}
-
-async function syncAppClientHeaderRules() {
-  // Safari（WebKit bug 253696）不允许扩展改写自己后台发起请求的请求头，
-  // 这些规则不会生效，注册本身还会抛错刷日志，直接跳过。
-  // eslint-disable-next-line node/prefer-global/process
-  if (process.env.FIREFOX || process.env.SAFARI)
-    return
-
-  try {
-    await browser.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: APP_CLIENT_HEADER_RULES.map(rule => rule.id),
-      addRules: APP_CLIENT_HEADER_RULES.map(rule => ({
-        id: rule.id,
-        // 高于 assets/rules.json 中为 passport POST 设置 Origin 的静态规则
-        priority: 3,
-        action: {
-          type: 'modifyHeaders',
-          requestHeaders: [
-            { header: 'user-agent', operation: 'set', value: rule.userAgent },
-            { header: 'referer', operation: 'set', value: APP_CLIENT_REFERER },
-            { header: 'origin', operation: 'remove' },
-            { header: 'sec-ch-ua', operation: 'remove' },
-            { header: 'sec-ch-ua-mobile', operation: 'remove' },
-            { header: 'sec-ch-ua-platform', operation: 'remove' },
-          ],
-        },
-        condition: {
-          regexFilter: rule.regexFilter,
-          resourceTypes: ['xmlhttprequest'],
-          tabIds: [-1],
-        },
-      })),
-    })
-  }
-  catch (error) {
-    console.error('[BewlyCat] Failed to update the APP client header rules:', error)
-  }
-}
-
-const appClientHeaderRulesReady = syncAppClientHeaderRules()
-
 async function requestAppClient({ endpoint, params, mid }: AppClientRequest) {
   const target = Object.hasOwn(APP_CLIENT_ENDPOINTS, endpoint) ? APP_CLIENT_ENDPOINTS[endpoint] : undefined
   if (!target)
@@ -165,7 +98,6 @@ async function requestAppClient({ endpoint, params, mid }: AppClientRequest) {
   }, APP_CLIENT_REQUEST_TIMEOUT)
 
   try {
-    await appClientHeaderRulesReady
     const headers = await getRequestHeaders(target.profile, mid)
     // 每次请求在后台重新签名，保证 ts 有效
     const signedParams = new URLSearchParams(signAppParams(params ?? {}))

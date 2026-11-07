@@ -114,7 +114,6 @@ if (shouldInitializeContentScript) {
   })
 }
 
-const isFirefox: boolean = /Firefox/i.test(navigator.userAgent)
 const isElectronEnv = isElectron()
 
 // 多语言页面（如 /ja/history）按去掉语言段后的路径匹配支持页面
@@ -258,16 +257,6 @@ else if (shouldInitializeContentScript) {
   setupWatchLaterAutoRemove()
   setupFavoriteOrganizerTripleSync()
   setupVideoWatchProgress()
-  // Fix `OverlayScrollbars` not working in Firefox
-  // https://github.com/fingerprintjs/fingerprintjs/issues/683#issuecomment-881210244
-  if (isFirefox) {
-    window.requestIdleCallback = window.requestIdleCallback.bind(window)
-    window.cancelIdleCallback = window.cancelIdleCallback.bind(window)
-    window.requestAnimationFrame = window.requestAnimationFrame.bind(window)
-    window.cancelAnimationFrame = window.cancelAnimationFrame.bind(window)
-    window.setTimeout = window.setTimeout.bind(window)
-    window.clearTimeout = window.clearTimeout.bind(window)
-  }
 
   let lastUrl = location.href
   let lastVideoNavigationKey = getVideoNavigationKey(location.href)

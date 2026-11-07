@@ -102,20 +102,6 @@ function apiListenerFactory(API_MAP: APIMAP) {
 
     const api = API_MAP[contentScriptQuery] as API
 
-    // eslint-disable-next-line node/prefer-global/process
-    if (process.env.FIREFOX && sender && sender.tab?.id) {
-      if (api._fetch.credentials === 'omit' || typedMessage.bewlyNoCookie === true)
-        return await doCachedRequest(typedMessage, api, sender.tab, undefined, signal)
-
-      // 获取tab信息以获取正确的cookieStoreId
-      const tab = await browser.tabs.get(sender.tab.id)
-      const storeId = tab.cookieStoreId || 'default'
-      // Only copy cookies that the API target would receive naturally. Filtering
-      // by store alone can mix cookies from unrelated permitted Bilibili hosts.
-      const cookies = await browser.cookies.getAll({ url: api.url, storeId })
-      return await doCachedRequest(typedMessage, api, tab, cookies, signal)
-    }
-
     return await doCachedRequest(typedMessage, api, sender?.tab, undefined, signal)
   }
 }

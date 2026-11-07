@@ -386,7 +386,6 @@ function triggerLoadMore() {
 }
 
 const supportsIntersectionObserver = typeof window !== 'undefined' && 'IntersectionObserver' in window
-const isFirefox = typeof navigator !== 'undefined' && /\bFirefox\//.test(navigator.userAgent)
 let intersectionObserver: IntersectionObserver | null = null
 let cardExposureObserver: IntersectionObserver | null = null
 let isGridActive = false
@@ -1370,7 +1369,6 @@ function getUniqueKey(item: T, index: number): string | number {
       class="video-card-grid-container"
       :class="[
         renderedGridClass,
-        { 'is-firefox': isFirefox },
       ]"
       m="b-0 t-0" relative w-full
       :style="gridContainerStyle"
@@ -1498,11 +1496,6 @@ function getUniqueKey(item: T, index: number): string | number {
 
 .video-card-grid-container {
   overflow-anchor: none;
-
-  &.is-firefox :deep(.video-card-container) {
-    content-visibility: visible;
-    contain-intrinsic-size: auto none;
-  }
 }
 
 :deep(.video-card-container) {

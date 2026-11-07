@@ -5,11 +5,8 @@ import process from 'node:process'
 import chokidar from 'chokidar'
 import fs from 'fs-extra'
 
-import { isDev, isFirefox, isSafari, log, r } from './utils'
+import { extensionDirectory, extensionDist, isDev, log, r } from './utils'
 
-const extensionDirectory = isFirefox
-  ? 'extension-firefox'
-  : isSafari ? 'extension-safari' : 'extension'
 const contributorsImageUrl = 'https://contrib.rocks/image?repo=keleus/BewlyCat'
 const contributorsImageCachePath = r('.cache/bewlycat/contributors.svg')
 const contributorsImagePath = r(extensionDirectory, 'assets/contributors.svg')
@@ -24,20 +21,12 @@ async function stubIndexHtml() {
   ]
 
   for (const view of views) {
-    await fs.ensureDir(r(
-      isFirefox
-        ? `extension-firefox/dist/${view}`
-        : isSafari ? `extension-safari/dist/${view}` : `extension/dist/${view}`,
-    ))
+    await fs.ensureDir(r(`${extensionDist}/${view}`))
     let data = await fs.readFile(r(`src/${view}/index.html`), 'utf-8')
     data = data
       .replace('"./main.ts"', `"/${view}/main.ts.js"`)
       .replace('<div id="app"></div>', '<div id="app">Vite server did not start</div>')
-    await fs.writeFile(r(
-      isFirefox
-        ? `extension-firefox/dist/${view}/index.html`
-        : isSafari ? `extension-safari/dist/${view}/index.html` : `extension/dist/${view}/index.html`,
-    ), data, 'utf-8')
+    await fs.writeFile(r(`${extensionDist}/${view}/index.html`), data, 'utf-8')
     log('PRE', `stub ${view}`)
   }
 }

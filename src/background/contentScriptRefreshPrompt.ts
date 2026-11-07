@@ -8,7 +8,6 @@ import { getRefreshPromptCopy, getRefreshPromptLocale, showRefreshPrompt } from 
 
 const CONTENT_SCRIPT_STARTUP_RETRY_DELAYS = [500, 1500]
 const CONTENT_SCRIPT_PING_TIMEOUT_MS = 2000
-const CONTENT_SCRIPT_RESTORE_RETRY_MS = 1000
 const REFRESH_UPDATE_STORAGE_KEY = 'contentScriptRefreshUpdate'
 
 let latestUpdate: RefreshPromptUpdate | undefined
@@ -30,24 +29,6 @@ function restoreUpdateState(): Promise<void> {
     }
   })()
   return updateStateReady
-}
-
-function recordExtensionUpdate(previousVersion?: string) {
-  latestUpdate = {
-    at: Date.now(),
-    version: browser.runtime.getManifest().version,
-    commit: CONTENT_SCRIPT_COMMIT,
-    previousVersion,
-  }
-  // 后台 service worker 休眠后仍需为尚未刷新的旧标签页保留事件证据。
-  void (async () => {
-    try {
-      await browser.storage.session.set({ [REFRESH_UPDATE_STORAGE_KEY]: latestUpdate })
-    }
-    catch {
-      // Session storage may be unavailable on older browsers.
-    }
-  })()
 }
 
 export async function refreshAllContentScriptTabs(
@@ -251,96 +232,14 @@ export async function promptContentScriptRefresh(
   return 'refresh-prompted'
 }
 
-const pendingPrompts = new Map<number, { cancelled: boolean }>()
-
-function queueContentScriptRefreshPrompt(tabId: number): void {
-  if (pendingPrompts.has(tabId))
-    return
-
-  const check = { cancelled: false }
-  pendingPrompts.set(tabId, check)
-  void promptContentScriptRefresh(tabId, browser, () => !check.cancelled)
-    .then((result) => {
-      if (result === 'refresh-prompted')
-        console.log(`[BewlyCat] Asked tab ${tabId} to refresh its content script.`)
-    })
-    .catch((error) => {
-      console.warn(`[BewlyCat] Failed to show the refresh prompt in tab ${tabId}.`, error)
-    })
-    .finally(() => {
-      if (pendingPrompts.get(tabId) === check)
-        pendingPrompts.delete(tabId)
-    })
-}
-
-function cancelContentScriptRefreshPrompt(tabId: number) {
-  const check = pendingPrompts.get(tabId)
-  if (check)
-    check.cancelled = true
-  pendingPrompts.delete(tabId)
-}
-
-async function queueActiveTabs(): Promise<void> {
-  const tabs = await browser.tabs.query({ active: true })
-  tabs.forEach((tab) => {
-    if (tab.id !== undefined)
-      queueContentScriptRefreshPrompt(tab.id)
-  })
-}
-
-function queueActiveTabsWithRestoreRetry(): void {
-  void queueActiveTabs().catch((error) => {
-    console.warn('[BewlyCat] Failed to inspect active tabs.', error)
-  })
-
-  globalThis.setTimeout(() => {
-    void queueActiveTabs().catch((error) => {
-      console.warn('[BewlyCat] Failed to inspect restored tabs.', error)
-    })
-  }, CONTENT_SCRIPT_RESTORE_RETRY_MS)
-}
-
 let refreshPromptListenersInitialized = false
 
 export function setupContentScriptRefreshPrompt(): void {
   if (refreshPromptListenersInitialized)
     return
 
+  // Safari runs a non-persistent background page, so tab lifecycle listeners are
+  // not registered; only the explicit "refresh all tabs" request is handled.
   refreshPromptListenersInitialized = true
   setupRefreshAllTabsListener()
-
-  // eslint-disable-next-line node/prefer-global/process
-  if (process.env.SAFARI)
-    return
-
-  browser.tabs.onActivated.addListener(({ tabId }) => {
-    queueContentScriptRefreshPrompt(tabId)
-  })
-
-  browser.tabs.onRemoved.addListener(cancelContentScriptRefreshPrompt)
-  browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // 即使刷新到相同 URL，也不能把上一份文档的检测结果注入新文档。
-    if (changeInfo.status === 'loading' || changeInfo.url)
-      cancelContentScriptRefreshPrompt(tabId)
-    if (changeInfo.status === 'complete' && tab.active)
-      queueContentScriptRefreshPrompt(tabId)
-  })
-
-  browser.runtime.onStartup.addListener(() => {
-    queueActiveTabsWithRestoreRetry()
-  })
-
-  browser.runtime.onInstalled.addListener((details) => {
-    if (details.reason === 'install')
-      return
-
-    if (details.reason === 'update')
-      recordExtensionUpdate(details.previousVersion)
-
-    queueActiveTabsWithRestoreRetry()
-  })
-
-  void queueActiveTabs().catch((error) => {
-    console.warn('[BewlyCat] Failed to inspect active tabs.', error)
-  })
 }

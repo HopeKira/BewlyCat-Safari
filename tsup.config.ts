@@ -4,9 +4,9 @@
 import { defineConfig } from 'tsup'
 
 import { thirdPartyLicensesEsbuildPlugin } from './scripts/thirdPartyLicenses'
-import { buildCommit, isDev, isFirefox, isSafari } from './scripts/utils'
+import { buildCommit, extensionDist, isDev } from './scripts/utils'
 
-const outDir = isFirefox ? 'extension-firefox/dist' : isSafari ? 'extension-safari/dist' : 'extension/dist'
+const outDir = extensionDist
 
 export default defineConfig(() => ({
   entry: {
@@ -22,7 +22,7 @@ export default defineConfig(() => ({
   outDir,
   format: ['esm'],
   target: 'esnext',
-  ignoreWatch: ['**/extension/**', '**/extension-firefox/**', '**/extension-safari/**'],
+  ignoreWatch: ['**/extension-safari/**'],
   splitting: false,
   loader: { '.css': 'text' },
   // Stream players are loaded by content scripts and must be self-contained.
@@ -33,8 +33,6 @@ export default defineConfig(() => ({
     '__DEV__': JSON.stringify(isDev),
     '__BUILD_COMMIT__': JSON.stringify(buildCommit),
     'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
-    'process.env.FIREFOX': isFirefox ? 'true' : 'false',
-    'process.env.SAFARI': isSafari ? 'true' : 'false',
   },
   platform: 'browser',
   minifyWhitespace: !isDev,

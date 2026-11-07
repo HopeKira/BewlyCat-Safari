@@ -6,7 +6,7 @@ import fs from 'fs-extra'
 import type { Options as TsupOptions } from 'tsup'
 import type { Plugin as VitePlugin } from 'vite'
 
-import { isFirefox, isSafari, r } from './utils'
+import { extensionDirectory, r } from './utils'
 
 export interface ThirdPartyLicense {
   name: string
@@ -16,9 +16,6 @@ export interface ThirdPartyLicense {
   licenseText?: string
 }
 
-const extensionDirectory = isFirefox
-  ? 'extension-firefox'
-  : isSafari ? 'extension-safari' : 'extension'
 const NODE_MODULES_SEGMENT = '/node_modules/'
 const LICENSE_FILE_PATTERN = /^(?:licen[cs]e|copying|notice)(?:[.\-_].*)?$/i
 
