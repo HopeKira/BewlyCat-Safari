@@ -75,11 +75,8 @@ pnpm install --frozen-lockfile >/dev/null 2>&1 || pnpm install >/dev/null 2>&1 |
 log "构建"
 pnpm build >/dev/null 2>&1 || die "构建失败"
 
-# 旧工程必须移走：转换器会复用已存在的目录，否则打包进去的是旧资源
-if [ -d extension-safari-macos ]; then
-  mkdir -p "$CACHE"
-  mv extension-safari-macos "$CACHE/project-$(date +%s)"
-fi
+# 转换器会复用已存在的目录，不清理就会把旧资源打包进去
+rm -rf extension-safari-macos
 
 log "生成 Xcode 工程"
 xcrun safari-web-extension-converter ./extension-safari \
@@ -119,6 +116,10 @@ done
 
 "$LSREG" -f "$APP" >/dev/null 2>&1 || true
 pluginkit -a "$APPEX" >/dev/null 2>&1 || true
+
+# 工程目录里是一个完整的 .app，留着会被 Spotlight 索引成第二个「BewlyCat」，
+# 在聚焦搜索/启动台里看起来像装了两遍。装完就删。
+rm -rf extension-safari-macos
 
 log "完成：$(git log --oneline -1)"
 log "提醒：免费证书未公证，Safari 每次启动会取消勾选，需要手动在 设置 → 扩展 里重新启用"
