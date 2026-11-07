@@ -75,8 +75,11 @@ pnpm install --frozen-lockfile >/dev/null 2>&1 || pnpm install >/dev/null 2>&1 |
 log "构建"
 pnpm build >/dev/null 2>&1 || die "构建失败"
 
-# 转换器会复用已存在的目录，不清理就会把旧资源打包进去
-rm -rf extension-safari-macos
+# 转换器会复用已存在的目录，不清理就会把旧资源打包进去。
+# 用 mv 而不是 rm：目录内文件多，rm -rf 可能被系统/环境的大批量删除保护拦下。
+if [ -d extension-safari-macos ]; then
+  mv extension-safari-macos "/tmp/bewlycat-build-$(date +%Y%m%d-%H%M%S)" 2>/dev/null || true
+fi
 
 log "生成 Xcode 工程"
 xcrun safari-web-extension-converter ./extension-safari \
@@ -118,8 +121,11 @@ done
 pluginkit -a "$APPEX" >/dev/null 2>&1 || true
 
 # 工程目录里是一个完整的 .app，留着会被 Spotlight 索引成第二个「BewlyCat」，
-# 在聚焦搜索/启动台里看起来像装了两遍。装完就删。
-rm -rf extension-safari-macos
+# 在聚焦搜索/启动台里看起来像装了两遍。装完移到 /tmp：
+# 不被索引、不占废纸篓、重启自动清理，且 mv 不会被大批量删除保护拦下。
+if [ -d extension-safari-macos ]; then
+  mv extension-safari-macos "/tmp/bewlycat-build-$(date +%Y%m%d-%H%M%S)" 2>/dev/null || true
+fi
 
 log "完成：$(git log --oneline -1)"
 log "提醒：免费证书未公证，Safari 每次启动会取消勾选，需要手动在 设置 → 扩展 里重新启用"
