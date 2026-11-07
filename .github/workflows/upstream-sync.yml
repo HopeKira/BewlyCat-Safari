@@ -1,0 +1,211 @@
+name: Upstream Sync
+
+# 自动合并：把上游 Safari 移植分支的新提交合入 refactor/safari-only。
+#
+# 规则：
+# - 能干净合并（或 rerere 能自动重放历史解法）→ 跑 lint / typecheck / test / build
+# - 全部通过才推送；任何一步失败都不推，改开 issue 说明原因
+# - rerere 会记住历史冲突的解法，同一批冲突第二次起自动应用，所以人工干预会
+#   随次数递减
+#
+# ⚠️ 定时任务只读取仓库默认分支上的 workflow，因此本文件必须存在于 safari 分支。
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # UTC 01:00 = 北京时间 09:00
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 只试算不推送
+        type: boolean
+        default: false
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  UPSTREAM_REPO: shiinayane/BewlyCat-Safari
+  UPSTREAM_BRANCH: safari
+  TARGET_BRANCH: refactor/safari-only
+  ISSUE_MARK: '[upstream-sync]'
+
+jobs:
+  sync:
+    name: Merge upstream and verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/safari-only
+          fetch-depth: 0
+
+      - name: Enable rerere
+        run: |
+          git config rerere.enabled true
+          git config rerere.autoupdate true
+          git config user.name 'upstream-sync[bot]'
+          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+
+      - name: Restore rerere cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .git/rr-cache
+          key: rerere-${{ github.run_id }}
+          restore-keys: |
+            rerere-
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch --no-tags upstream \
+            "+refs/heads/${UPSTREAM_BRANCH}:refs/remotes/upstream/${UPSTREAM_BRANCH}"
+
+      - name: Compare
+        id: compare
+        run: |
+          set -uo pipefail
+          behind=$(git rev-list --count "HEAD..upstream/${UPSTREAM_BRANCH}")
+          echo "behind=${behind}" >> "$GITHUB_OUTPUT"
+          if [ "$behind" -eq 0 ]; then
+            echo "上游无新提交，无需合并。" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "上游新增 ${behind} 个提交。" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Merge
+        id: merge
+        if: steps.compare.outputs.behind != '0'
+        run: |
+          set -uo pipefail
+          git merge --no-ff --no-edit "upstream/${UPSTREAM_BRANCH}" > /tmp/merge.log 2>&1 || true
+
+          conflicts=$(git diff --name-only --diff-filter=U)
+          if [ -n "$conflicts" ]; then
+            printf '%s\n' "$conflicts" > /tmp/conflicts.txt
+            git merge --abort
+            {
+              echo "### 合并冲突，已停止（未推送）"
+              echo
+              echo "rerere 没能自动解决以下文件："
+              echo
+              printf '%s\n' "$conflicts" | sed 's/^/- `/; s/$/`/'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          # rerere 可能已经解完冲突，但合并提交还没生成
+          if [ -f .git/MERGE_HEAD ]; then
+            git commit --no-edit
+          fi
+
+          echo "合并没有冲突。" >> "$GITHUB_STEP_SUMMARY"
+          git log --oneline -5 >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Node.js
+        if: steps.merge.outcome == 'success' && steps.compare.outputs.behind != '0'
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install pnpm
+        if: steps.merge.outcome == 'success' && steps.compare.outputs.behind != '0'
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: |
+            - args: [--frozen-lockfile]
+
+      - name: Lint
+        if: steps.merge.outcome == 'success' && steps.compare.outputs.behind != '0'
+        run: pnpm lint
+
+      - name: Type check
+        if: steps.merge.outcome == 'success' && steps.compare.outputs.behind != '0'
+        run: pnpm typecheck
+
+      - name: Test
+        if: steps.merge.outcome == 'success' && steps.compare.outputs.behind != '0'
+        run: pnpm test
+
+      - name: Build
+        if: steps.merge.outcome == 'success' && steps.compare.outputs.behind != '0'
+        run: pnpm build
+
+      - name: Push
+        if: steps.merge.outcome == 'success' && steps.compare.outputs.behind != '0' && inputs.dry_run != true
+        run: |
+          set -uo pipefail
+          git push origin "HEAD:${TARGET_BRANCH}"
+          echo "已推送到 \`${TARGET_BRANCH}\`：$(git log --oneline -1)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save rerere cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .git/rr-cache
+          key: rerere-${{ github.run_id }}
+
+      - name: Close issue when up to date
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          gh issue list --state open --search "${ISSUE_MARK} in:title" --limit 50 \
+            --json number,title \
+            --jq ".[] | select(.title | startswith(\"${ISSUE_MARK}\")) | .number" \
+            | while read -r n; do
+                [ -n "$n" ] || continue
+                gh issue close "$n" --comment '已自动同步并通过检查，关闭。'
+                echo "已关闭 issue #$n"
+              done
+
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/report.md"
+          {
+            echo "上游同步失败，**没有推送任何改动**。"
+            echo
+            if [ -f /tmp/conflicts.txt ]; then
+              echo "### 合并冲突"
+              echo
+              echo '```'
+              cat /tmp/conflicts.txt
+              echo '```'
+              echo
+              echo "本地接手："
+              echo
+              echo '```sh'
+              echo "git fetch origin && git switch ${TARGET_BRANCH} && git pull"
+              echo "git fetch https://github.com/${UPSTREAM_REPO}.git ${UPSTREAM_BRANCH}"
+              echo "git merge FETCH_HEAD   # 解决冲突后提交并推送"
+              echo '```'
+            else
+              echo "### 合并成功但检查未通过"
+              echo
+              echo "查看运行日志定位失败项。合并结果未推送，修复后需重新触发。"
+            fi
+            echo
+            echo "运行日志：${RUN_URL}"
+          } > "$report"
+
+          existing=$(gh issue list --state open --search "${ISSUE_MARK} in:title" --limit 50 \
+            --json number,title \
+            --jq ".[] | select(.title | startswith(\"${ISSUE_MARK}\")) | .number" | head -n 1)
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file "$report"
+          else
+            gh issue create --title "${ISSUE_MARK} 上游同步需要处理" --body-file "$report"
+          fi
