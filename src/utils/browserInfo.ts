@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 export interface BrowserInfo {
   name: string | null
   version: string | null

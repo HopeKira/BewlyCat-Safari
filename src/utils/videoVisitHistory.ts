@@ -1,6 +1,5 @@
 import type { ShallowRef } from 'vue'
 import { shallowRef, triggerRef } from 'vue'
-import browser from 'webextension-polyfill'
 
 import { settings, settingsReady } from '~/logic'
 

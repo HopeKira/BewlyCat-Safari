@@ -1,5 +1,4 @@
 import { watch } from 'vue'
-import browser from 'webextension-polyfill'
 
 import { localSettings, settings } from '~/logic'
 import { i18n } from '~/utils/i18n'

@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 import type { ContentScriptIdentity } from '~/constants/contentScript'
 import { CONTENT_SCRIPT_COMMIT, REFRESH_ALL_CONTENT_SCRIPT_TABS } from '~/constants/contentScript'
 import { LanguageType } from '~/enums/appEnums'

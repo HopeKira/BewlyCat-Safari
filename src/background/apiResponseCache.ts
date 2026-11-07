@@ -1,5 +1,4 @@
 import type Browser from 'webextension-polyfill'
-import browser from 'webextension-polyfill'
 
 interface CacheEntry {
   response: any

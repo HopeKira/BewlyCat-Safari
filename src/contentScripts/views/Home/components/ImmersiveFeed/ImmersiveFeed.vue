@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
-import browser from 'webextension-polyfill'
 
 import { useBewlyApp } from '~/composables/useAppProvider'
 import { settings } from '~/logic'

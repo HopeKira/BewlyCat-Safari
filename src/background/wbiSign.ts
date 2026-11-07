@@ -184,8 +184,6 @@ export function addWbiSign(params: Record<string, any>, options: WbiKeyOptions =
  */
 async function getBilibiliCookies(): Promise<string> {
   try {
-    // 动态导入 browser，避免在非浏览器环境下报错
-    const browser = await import('webextension-polyfill').then(m => m.default)
     const cookies = await browser.cookies.getAll({
       domain: '.bilibili.com',
     })

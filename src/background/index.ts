@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill'
+import type Browser from 'webextension-polyfill'
 
 import { BILIBILI_DESKTOP_USER_AGENT, isPreventMobileRedirectEnabled } from '~/utils/bilibiliDesktopNavigation'
 import { GET_BROWSER_INFO_MESSAGE, getExtensionBrowserInfo } from '~/utils/browserInfo'
@@ -22,7 +22,7 @@ browser.runtime.onInstalled.addListener(async () => {
 })
 
 const PREVENT_MOBILE_REDIRECT_RULE_ID = 1001
-const preventMobileRedirectRule: browser.DeclarativeNetRequest.Rule = {
+const preventMobileRedirectRule: Browser.DeclarativeNetRequest.Rule = {
   id: PREVENT_MOBILE_REDIRECT_RULE_ID,
   priority: 2,
   action: {

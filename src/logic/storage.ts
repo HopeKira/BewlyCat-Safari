@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 import { useSettingsStorage } from '~/composables/useSettingsStorage'
 import { useStorageLocal } from '~/composables/useStorageLocal'
 import type { wallpaperItem } from '~/constants/imgs'

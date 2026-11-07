@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useWindowFocus } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import browser from 'webextension-polyfill'
 
 import ALink from '~/components/ALink.vue'
 import { useLayoutEditMode } from '~/composables/useLayoutEditMode'
@@ -25,6 +24,9 @@ import TopBarItemEditor from './TopBarItemEditor.vue'
 import TopBarModeSwitcher from './TopBarModeSwitcher.vue'
 
 const emit = defineEmits(['notificationsClick'])
+
+// Safari 原生全局；显式绑定后模板里可直接使用
+const browser = window.browser
 
 const topBarStore = useTopBarStore()
 const showAddOpenTabsDialog = ref(false)

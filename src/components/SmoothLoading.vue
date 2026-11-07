@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import browser from 'webextension-polyfill'
-
 const props = defineProps<{
   show: boolean | null | undefined
   keepSpace?: boolean // 是否在隐藏时保持占位空间

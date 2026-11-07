@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 import type { ExtensionCacheKey, ExtensionCacheRead, ExtensionCacheWrite } from '~/constants/extensionCache'
 import { EXTENSION_CACHE_MESSAGE, isExtensionCacheKey } from '~/constants/extensionCache'
 import { onMessage } from '~/utils/messaging'

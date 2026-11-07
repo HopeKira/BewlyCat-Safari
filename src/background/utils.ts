@@ -3,7 +3,6 @@
 // 2. json化后返回data
 
 import type Browser from 'webextension-polyfill'
-import browser from 'webextension-polyfill'
 
 import { waitWithSignal } from '~/utils/abort'
 

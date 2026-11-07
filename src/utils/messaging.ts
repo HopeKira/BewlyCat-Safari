@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill'
+import type Browser from 'webextension-polyfill'
 
 import type { ApiPortResponse } from '~/constants/apiRequest'
 import { API_REQUEST_PORT } from '~/constants/apiRequest'
@@ -12,7 +12,7 @@ export interface Message<T = any> {
 
 export type MessageHandler<T = any, R = any> = (
   data: T,
-  sender?: browser.Runtime.MessageSender,
+  sender?: Browser.Runtime.MessageSender,
 ) => R | Promise<R>
 
 const TRANSIENT_BACKGROUND_MESSAGE_ATTEMPTS = 3
@@ -165,7 +165,7 @@ export function onMessage<T = any, R = any>(
   type: string,
   handler: MessageHandler<T, R>,
 ): void {
-  browser.runtime.onMessage.addListener((message: any, sender: browser.Runtime.MessageSender) => {
+  browser.runtime.onMessage.addListener((message: any, sender: Browser.Runtime.MessageSender) => {
     if (message?.type === type) {
       const result = handler(message.data, sender)
       // 如果返回 Promise，需要返回 true 表示异步响应

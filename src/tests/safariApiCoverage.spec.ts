@@ -6,7 +6,9 @@ import type { SafariApiDefinition } from '~/utils/safariApi'
 import { SAFARI_MAIN_WORLD_API_DEFINITIONS } from '~/utils/safariApi'
 
 // 后台 API 定义链路会引入扩展运行时，测试中只读取静态定义。
-vi.mock('webextension-polyfill', () => ({ default: {} }))
+vi.hoisted(() => {
+  ;(globalThis as any).browser = {}
+})
 vi.mock('~/utils/messaging', () => ({ onMessage: vi.fn(), sendMessage: vi.fn() }))
 
 interface BackgroundApi {

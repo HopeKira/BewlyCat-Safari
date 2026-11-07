@@ -1,6 +1,6 @@
 import type { MaybeRef, Ref, WatchOptions } from 'vue'
 import { getCurrentScope, isProxy, onScopeDispose, ref, shallowRef, toRaw, toValue, watch } from 'vue'
-import browser from 'webextension-polyfill'
+import type Browser from 'webextension-polyfill'
 
 type Awaitable<T> = T | Promise<T>
 type SerializerType = 'any' | 'boolean' | 'date' | 'map' | 'number' | 'object' | 'set' | 'string'
@@ -268,7 +268,7 @@ export function useStorageLocal<T>(key: string, initialValue: MaybeRef<T>, optio
       )
 
       if (listenToStorageChanges) {
-        const onChanged = async (changes: Record<string, browser.Storage.StorageChange>, areaName: string) => {
+        const onChanged = async (changes: Record<string, Browser.Storage.StorageChange>, areaName: string) => {
           if (areaName !== 'local' || !(key in changes))
             return
 

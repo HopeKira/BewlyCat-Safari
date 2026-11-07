@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 const SEARCH_BAR_CHARACTER_ASSET_PATH = '/assets/search-bar-characters'
 const SEARCH_BAR_CHARACTER_FILENAMES = [
   '22chan-1.png',

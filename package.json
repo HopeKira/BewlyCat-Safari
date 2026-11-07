@@ -55,7 +55,6 @@
     "@vueuse/core": "^13.7.0",
     "chokidar": "^4.0.3",
     "cross-env": "^10.0.0",
-    "crx": "^5.0.1",
     "eslint": "^9.33.0",
     "eslint-plugin-format": "^1.0.1",
     "eslint-plugin-simple-import-sort": "^12.1.1",
@@ -80,8 +79,6 @@
     "vitest": "^3.2.4",
     "vue": "^3.5.19",
     "vue-tsc": "^3.0.5",
-    "web-ext": "^8.9.0",
-    "webextension-polyfill": "^0.12.0",
     "wxt": "^0.20.8"
   },
   "simple-git-hooks": {
@@ -90,15 +87,5 @@
   },
   "lint-staged": {
     "*": "eslint --fix"
-  },
-  "webExt": {
-    "run": {
-      "keepProfileChanges": true,
-      "firefoxProfile": "./firefox-web-ext-profile",
-      "chromiumProfile": "./chromium-web-ext-profile",
-      "startUrl": [
-        "https://www.bilibili.com/"
-      ]
-    }
   }
 }

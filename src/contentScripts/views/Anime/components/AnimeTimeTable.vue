@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import browser from 'webextension-polyfill'
 
 import HorizontalScrollView from '~/components/HorizontalScrollView.vue'
 import type { Result as TimetableItem, TimetableResult } from '~/models/anime/timeTable'
 import api from '~/utils/api'
 import { removeHttpFromUrl } from '~/utils/main'
+
+// Safari 原生全局；显式绑定后模板里可直接使用
+const browser = window.browser
 
 const { t } = useI18n()
 const animeTimeTable = reactive<TimetableItem[]>([])

@@ -1,3 +1,11 @@
+// Safari 原生提供 promise 版 browser.* 命名空间（Safari 14+），因此不再打包
+// webextension-polyfill；类型仍由 @types/webextension-polyfill 提供。
+declare const browser: typeof import('webextension-polyfill')
+
+interface Window {
+  browser: typeof import('webextension-polyfill')
+}
+
 declare const __DEV__: boolean
 declare const __BUILD_COMMIT__: string
 

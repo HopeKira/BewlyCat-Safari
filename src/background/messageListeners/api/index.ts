@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 import type { ApiPortResponse } from '~/constants/apiRequest'
 import { API_REQUEST_PORT } from '~/constants/apiRequest'
 import { onMessage } from '~/utils/messaging'

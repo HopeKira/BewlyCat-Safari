@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import browser from 'webextension-polyfill'
-
 const props = defineProps<{
   description?: string
 }>()

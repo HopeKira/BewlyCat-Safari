@@ -1,6 +1,6 @@
 import type { MaybeRef } from 'vue'
 import { computed, getCurrentScope, isProxy, onScopeDispose, reactive, toRaw, toValue, watch } from 'vue'
-import browser from 'webextension-polyfill'
+import type Browser from 'webextension-polyfill'
 
 import type { StorageRef } from '~/composables/useStorageLocal'
 import { isBackgroundUnavailableError, sendMessage } from '~/utils/messaging'
@@ -370,7 +370,7 @@ export function useSettingsStorage<T extends object>(
   }
 
   const onStorageChanged = (
-    changes: Record<string, browser.Storage.StorageChange>,
+    changes: Record<string, Browser.Storage.StorageChange>,
     areaName: string,
   ) => {
     if (areaName !== 'local')

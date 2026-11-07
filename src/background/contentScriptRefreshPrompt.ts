@@ -1,5 +1,5 @@
+import type Browser from 'webextension-polyfill'
 import type { Scripting, Tabs } from 'webextension-polyfill'
-import browser from 'webextension-polyfill'
 
 import type { ContentScriptIdentity } from '~/constants/contentScript'
 import { CONTENT_SCRIPT_COMMIT, CONTENT_SCRIPT_MATCHES, CONTENT_SCRIPT_PING, CONTENT_SCRIPT_PONG, isContentScriptPong, isContentScriptTargetUrl, REFRESH_ALL_CONTENT_SCRIPT_TABS } from '~/constants/contentScript'
@@ -67,7 +67,7 @@ export async function refreshAllContentScriptTabs(
 let pendingRefreshAll: Promise<{ failed: number }> | undefined
 
 function setupRefreshAllTabsListener() {
-  browser.runtime.onMessage.addListener((message: unknown, sender: browser.Runtime.MessageSender) => {
+  browser.runtime.onMessage.addListener((message: unknown, sender: Browser.Runtime.MessageSender) => {
     if (typeof message !== 'object' || message === null || !('type' in message)
       || message.type !== REFRESH_ALL_CONTENT_SCRIPT_TABS) {
       return false

@@ -26,14 +26,8 @@ export const sharedConfig: UserConfig = {
     Vue(),
 
     AutoImport({
-      imports: [
-        'vue',
-        {
-          'webextension-polyfill': [
-            ['*', 'browser'],
-          ],
-        },
-      ],
+      // Safari 原生提供 promise 版 browser.*，不再需要 polyfill 注入。
+      imports: ['vue'],
     }),
 
     // https://github.com/intlify/bundle-tools/tree/main/packages/unplugin-vue-i18n
@@ -70,7 +64,6 @@ export const sharedConfig: UserConfig = {
     include: [
       'vue',
       '@vueuse/core',
-      'webextension-polyfill',
     ],
     exclude: [
       'vue-demi',

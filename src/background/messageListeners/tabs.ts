@@ -1,5 +1,5 @@
+import type Browser from 'webextension-polyfill'
 import type { Tabs } from 'webextension-polyfill'
-import browser from 'webextension-polyfill'
 
 import { onMessage } from '~/utils/messaging'
 
@@ -14,7 +14,7 @@ export enum TABS_MESSAGE {
   GET_OPEN_BILIBILI_TAB_URLS = 'getOpenBilibiliTabUrls',
 }
 
-async function handleMessage(data: Message, sender?: browser.Runtime.MessageSender) {
+async function handleMessage(data: Message, sender?: Browser.Runtime.MessageSender) {
   if (data.contentScriptQuery === TABS_MESSAGE.OPEN_LINK_IN_BACKGROUND) {
     // 处理以 // 开头的 URL
     const url = data.url?.startsWith('//') ? `https:${data.url}` : data.url

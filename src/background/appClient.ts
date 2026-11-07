@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 import type { AppClientProfile, AppClientRequest } from '~/constants/appClient'
 import { APP_CLIENT_ENDPOINTS, APP_CLIENT_REQUEST } from '~/constants/appClient'
 import { signAppParams } from '~/utils/appSign'

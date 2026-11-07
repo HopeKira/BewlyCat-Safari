@@ -1,5 +1,4 @@
 import type Browser from 'webextension-polyfill'
-import browser from 'webextension-polyfill'
 
 import { CONTENT_SCRIPT_MATCHES } from '~/constants/contentScript'
 import type {

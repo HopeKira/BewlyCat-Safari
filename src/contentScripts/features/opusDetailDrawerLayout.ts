@@ -1,5 +1,4 @@
 import { createVNode, render } from 'vue'
-import browser from 'webextension-polyfill'
 
 import Icon from '~/components/Icon.vue'
 import { isInIframe } from '~/utils/main'

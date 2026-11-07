@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'vue-toastification'
-import browser from 'webextension-polyfill'
 
 import Button from '~/components/Button.vue'
 import Dialog from '~/components/Dialog.vue'
@@ -24,6 +23,9 @@ import Maintenance from '../Advanced/Maintenance.vue'
 import SettingsItem from '../components/SettingsItem.vue'
 import SettingsItemGroup from '../components/SettingsItemGroup.vue'
 import SettingsSectionHeading from '../components/SettingsSectionHeading.vue'
+
+// Safari 原生全局；显式绑定后模板里可直接使用
+const browser = window.browser
 
 interface ThirdPartyLicense {
   name: string

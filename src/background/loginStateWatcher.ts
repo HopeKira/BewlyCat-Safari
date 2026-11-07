@@ -1,5 +1,3 @@
-import browser from 'webextension-polyfill'
-
 import { CONTENT_SCRIPT_MATCHES } from '~/constants/contentScript'
 import { TOP_BAR_STATE_MESSAGE } from '~/constants/topBarState'
 

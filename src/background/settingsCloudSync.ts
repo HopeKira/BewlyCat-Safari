@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill'
+import type Browser from 'webextension-polyfill'
 
 import { onMessage } from '~/utils/messaging'
 import { supportsBrowserSettingsSync } from '~/utils/safariRuntime'
@@ -452,7 +452,7 @@ function updateCloudSyncPreference(value: unknown) {
 }
 
 function handleLocalChanges(
-  changes: Record<string, browser.Storage.StorageChange>,
+  changes: Record<string, Browser.Storage.StorageChange>,
   areaName: string,
 ) {
   if (areaName !== 'local')
@@ -500,7 +500,7 @@ function handleLocalChanges(
 }
 
 function handleSyncChanges(
-  changes: Record<string, browser.Storage.StorageChange>,
+  changes: Record<string, Browser.Storage.StorageChange>,
   areaName: string,
 ) {
   if (areaName !== 'sync' || !enabled)

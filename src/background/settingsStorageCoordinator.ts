@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill'
+import type Browser from 'webextension-polyfill'
 
 import { onMessage } from '~/utils/messaging'
 import type { SettingsCloudSyncEntry, SettingsCloudSyncMode, SettingsCloudSyncVersion } from '~/utils/settingsCloudSyncProtocol'
@@ -532,7 +532,7 @@ export function collectSettingsCloudSyncEntries(fields: string[]) {
 }
 
 function handleStorageReset(
-  changes: Record<string, browser.Storage.StorageChange>,
+  changes: Record<string, Browser.Storage.StorageChange>,
   areaName: string,
 ) {
   if (areaName !== 'local')
