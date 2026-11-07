@@ -1,0 +1,165 @@
+name: Upstream Watch
+
+# 只探测、不合并。
+# 每天比较 refactor/safari-only 与上游 Safari 移植分支，有新提交就开/更新 issue，
+# 并把「能不能干净合并」预判结果一起写进去。不做任何 push。
+#
+# ⚠️ 定时任务只读取仓库默认分支上的 workflow，所以本文件必须存在于 safari 分支。
+# ⚠️ fork 的 Actions 默认关闭，需要到 Actions 页面手动启用一次；连续 60 天无活动
+#    也会被 GitHub 自动停用，收到邮件重新启用即可。
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # UTC 01:00 = 北京时间 09:00
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  UPSTREAM_REPO: shiinayane/BewlyCat-Safari
+  UPSTREAM_BRANCH: safari
+  WATCH_BRANCH: refactor/safari-only
+  ORIGIN_REPO: keleus/BewlyCat
+  ISSUE_MARK: '[upstream-watch]'
+
+jobs:
+  watch:
+    name: Compare with upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/safari-only
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch --quiet --no-tags upstream \
+            "+refs/heads/${UPSTREAM_BRANCH}:refs/remotes/upstream/${UPSTREAM_BRANCH}"
+          echo "上游 HEAD：$(git log --oneline -1 "upstream/${UPSTREAM_BRANCH}")"
+
+      - name: Compare and trial merge
+        id: cmp
+        run: |
+          set -uo pipefail
+          upstream_ref="upstream/${UPSTREAM_BRANCH}"
+          behind=$(git rev-list --count "HEAD..${upstream_ref}")
+          echo "behind=${behind}" >> "$GITHUB_OUTPUT"
+
+          if [ "$behind" -eq 0 ]; then
+            echo "上游没有新提交，\`${WATCH_BRANCH}\` 已包含 \`${UPSTREAM_REPO}@${UPSTREAM_BRANCH}\`。" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git config user.name 'upstream-watch'
+          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+
+          clean=false
+          if git merge --no-commit --no-ff "$upstream_ref" > "$RUNNER_TEMP/merge.log" 2>&1; then
+            clean=true
+          fi
+
+          git diff --name-only --diff-filter=U > "$RUNNER_TEMP/conflicts.txt" || true
+          conflict_count=$(wc -l < "$RUNNER_TEMP/conflicts.txt" | tr -d ' ')
+          git merge --abort 2>/dev/null || git reset --hard >/dev/null 2>&1
+
+          echo "clean=${clean}" >> "$GITHUB_OUTPUT"
+          echo "conflicts=${conflict_count}" >> "$GITHUB_OUTPUT"
+          echo "落后 ${behind} 个提交，可干净合并：${clean}，冲突文件：${conflict_count}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build report
+        if: steps.cmp.outputs.behind != '0'
+        env:
+          BEHIND: ${{ steps.cmp.outputs.behind }}
+          CLEAN: ${{ steps.cmp.outputs.clean }}
+          CONFLICTS: ${{ steps.cmp.outputs.conflicts }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          upstream_ref="upstream/${UPSTREAM_BRANCH}"
+          report="$RUNNER_TEMP/report.md"
+
+          latest_release=$(curl -s "https://api.github.com/repos/${ORIGIN_REPO}/releases/latest" \
+            | python3 -c "import json,sys;print(json.load(sys.stdin).get('tag_name') or '未知')" 2>/dev/null || echo '未知')
+
+          {
+            echo "上游 \`${UPSTREAM_REPO}@${UPSTREAM_BRANCH}\` 比 \`${WATCH_BRANCH}\` 多 **${BEHIND}** 个提交。"
+            echo
+            echo "原版 \`${ORIGIN_REPO}\` 最新发布：\`${latest_release}\`"
+            echo
+            echo "### 新增提交"
+            echo
+            echo '```'
+            git log --oneline --no-decorate "HEAD..${upstream_ref}" | head -n 40
+            echo '```'
+            echo
+            if [ "${CLEAN}" = "true" ]; then
+              echo "### 合并预判：✅ 无冲突"
+              echo
+              echo "本地直接 merge 即可跟进。"
+            else
+              echo "### 合并预判：⚠️ 有冲突（${CONFLICTS} 个文件）"
+              echo
+              echo '```'
+              head -n 40 "$RUNNER_TEMP/conflicts.txt"
+              echo '```'
+            fi
+            echo
+            echo "### 本地跟进"
+            echo
+            echo '```sh'
+            echo "git fetch origin && git switch ${WATCH_BRANCH} && git pull"
+            echo "git fetch https://github.com/${UPSTREAM_REPO}.git ${UPSTREAM_BRANCH}"
+            echo "git merge FETCH_HEAD"
+            echo "pnpm install && pnpm build"
+            echo '```'
+            echo
+            echo "构建产物在 \`extension-safari/\`，之后按 SAFARI.md 转换、签名、安装。"
+            echo
+            echo "运行日志：${RUN_URL}"
+          } > "$report"
+
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update issue
+        if: steps.cmp.outputs.behind != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          existing=$(gh issue list --state open --search "${ISSUE_MARK} in:title" --limit 50 \
+            --json number,title \
+            --jq ".[] | select(.title | startswith(\"${ISSUE_MARK}\")) | .number" | head -n 1)
+
+          if [ -n "${existing}" ]; then
+            gh issue edit "$existing" --body-file "$RUNNER_TEMP/report.md"
+            echo "已更新 issue #$existing"
+          else
+            gh issue create \
+              --title "${ISSUE_MARK} BewlyCat 上游有新提交" \
+              --body-file "$RUNNER_TEMP/report.md"
+          fi
+
+      - name: Close issue when up to date
+        if: steps.cmp.outputs.behind == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          gh issue list --state open --search "${ISSUE_MARK} in:title" --limit 50 \
+            --json number,title \
+            --jq ".[] | select(.title | startswith(\"${ISSUE_MARK}\")) | .number" \
+            | while read -r number; do
+                [ -n "$number" ] || continue
+                gh issue close "$number" --comment '已跟进上游，自动关闭。'
+                echo "已关闭 issue #$number"
+              done

@@ -10,8 +10,10 @@ name: Safari Sync Upstream
 # （上游改动 .github/workflows 时，默认 GITHUB_TOKEN 无权推送。）
 
 on:
-  schedule:
-    - cron: '23 2 * * *'
+  # 定时自动 rebase 已停用：本仓库当前只做「探测」（见 upstream-watch.yml），
+  # 不做自动合并。需要恢复每日自动同步时，取消下面两行注释即可。
+  # schedule:
+  #   - cron: '23 2 * * *'
   workflow_dispatch:
     inputs:
       ref:
